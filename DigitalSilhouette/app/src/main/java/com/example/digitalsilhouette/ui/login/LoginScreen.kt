@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -29,13 +31,18 @@ import com.example.digitalsilhouette.theme.FocusTheme
 
 @Composable
 fun LoginScreen(
-  onLoginSuccess: (email: String, name: String) -> Unit,
+  onLoginSuccess: (email: String, name: String, password: String) -> Unit,
   theme: FocusTheme,
+  selectedTheme: String,
+  onThemeSelected: (String) -> Unit,
+  initialName: String = "",
+  initialEmail: String = "",
+  initialPassword: String = "",
   modifier: Modifier = Modifier
 ) {
-  var name by remember { mutableStateOf("") }
-  var email by remember { mutableStateOf("") }
-  var password by remember { mutableStateOf("") }
+  var name by remember { mutableStateOf(initialName) }
+  var email by remember { mutableStateOf(initialEmail) }
+  var password by remember { mutableStateOf(initialPassword) }
   var isPasswordVisible by remember { mutableStateOf(false) }
 
   var nameError by remember { mutableStateOf<String?>(null) }
@@ -103,7 +110,15 @@ fun LoginScreen(
           color = theme.textSecondary,
           letterSpacing = 1.sp
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Dynamic theme selector placed on Login Screen
+        ThemeSelectorRow(
+          selectedTheme = selectedTheme,
+          onThemeSelected = onThemeSelected,
+          theme = theme
+        )
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Name field
         OutlinedTextField(
@@ -227,7 +242,7 @@ fun LoginScreen(
             }
 
             if (isValid) {
-              onLoginSuccess(email, name)
+              onLoginSuccess(email, name, password)
             }
           },
           colors = ButtonDefaults.buttonColors(
@@ -246,6 +261,43 @@ fun LoginScreen(
             letterSpacing = 1.sp
           )
         }
+      }
+    }
+  }
+}
+
+@Composable
+fun ThemeSelectorRow(
+  selectedTheme: String,
+  onThemeSelected: (String) -> Unit,
+  theme: FocusTheme
+) {
+  val themes = listOf("Aether Neon", "Cyberpunk", "Forest Oasis", "Obsidian", "Snow Drift")
+  LazyRow(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    items(themes) { name ->
+      val isSelected = selectedTheme == name
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(8.dp))
+          .background(if (isSelected) theme.accent.copy(alpha = 0.15f) else Color.Transparent)
+          .border(
+            width = 1.dp,
+            color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.2f),
+            shape = RoundedCornerShape(8.dp)
+          )
+          .clickable { onThemeSelected(name) }
+          .padding(horizontal = 10.dp, vertical = 6.dp)
+      ) {
+        Text(
+          text = name,
+          fontSize = 10.sp,
+          fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+          color = if (isSelected) theme.accent else theme.textSecondary
+        )
       }
     }
   }

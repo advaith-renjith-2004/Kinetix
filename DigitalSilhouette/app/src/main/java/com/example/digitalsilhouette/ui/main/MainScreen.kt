@@ -202,13 +202,7 @@ internal fun MainScreenContent(
     }
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Theme Selector Row
-    ThemeSelectorRow(
-      selectedTheme = successState.selectedTheme,
-      onThemeSelected = { viewModel.changeTheme(it) },
-      theme = theme
-    )
-    Spacer(modifier = Modifier.height(12.dp))
+
 
     // Permission Alerts Block
     if (!successState.hasNotificationPermission || !successState.hasDndPermission) {
@@ -267,42 +261,7 @@ internal fun MainScreenContent(
   }
 }
 
-@Composable
-fun ThemeSelectorRow(
-  selectedTheme: String,
-  onThemeSelected: (String) -> Unit,
-  theme: FocusTheme
-) {
-  val themes = listOf("Aether Neon", "Cyberpunk", "Forest Oasis", "Obsidian", "Snow Drift")
-  LazyRow(
-    modifier = Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically
-  ) {
-    items(themes) { name ->
-      val isSelected = selectedTheme == name
-      Box(
-        modifier = Modifier
-          .clip(RoundedCornerShape(8.dp))
-          .background(if (isSelected) theme.accent.copy(alpha = 0.15f) else Color.Transparent)
-          .border(
-            width = 1.dp,
-            color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.2f),
-            shape = RoundedCornerShape(8.dp)
-          )
-          .clickable { onThemeSelected(name) }
-          .padding(horizontal = 12.dp, vertical = 6.dp)
-      ) {
-        Text(
-          text = name,
-          fontSize = 11.sp,
-          fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-          color = if (isSelected) theme.accent else theme.textSecondary
-        )
-      }
-    }
-  }
-}
+
 
 @Composable
 fun TabSelector(

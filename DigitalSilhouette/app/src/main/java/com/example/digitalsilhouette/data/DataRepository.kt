@@ -19,6 +19,7 @@ interface DataRepository {
   val isLoggedIn: StateFlow<Boolean>
   val userName: StateFlow<String>
   val userEmail: StateFlow<String>
+  val userPassword: StateFlow<String>
 
   fun setServiceRunning(running: Boolean)
   fun setFocusActive(active: Boolean, startTime: Long?)
@@ -27,7 +28,7 @@ interface DataRepository {
   fun logEvent(event: String)
   fun setTheme(themeName: String)
   fun clearLogs()
-  fun loginUser(email: String, name: String)
+  fun loginUser(email: String, name: String, password: String)
   fun logoutUser()
 }
 
@@ -60,6 +61,9 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
 
   private val _userEmail = MutableStateFlow(sharedPrefs.getString("user_email", "") ?: "")
   override val userEmail: StateFlow<String> = _userEmail.asStateFlow()
+
+  private val _userPassword = MutableStateFlow(sharedPrefs.getString("user_password", "") ?: "")
+  override val userPassword: StateFlow<String> = _userPassword.asStateFlow()
 
   init {
     loadSessions()
@@ -120,26 +124,24 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
     _sensorLogs.value = emptyList()
   }
 
-  override fun loginUser(email: String, name: String) {
+  override fun loginUser(email: String, name: String, password: String) {
     _userName.value = name
     _userEmail.value = email
+    _userPassword.value = password
     _isLoggedIn.value = true
     sharedPrefs.edit()
       .putBoolean("is_logged_in", true)
       .putString("user_name", name)
       .putString("user_email", email)
+      .putString("user_password", password)
       .apply()
     logEvent("User $name logged in ($email).")
   }
 
   override fun logoutUser() {
-    _userName.value = ""
-    _userEmail.value = ""
     _isLoggedIn.value = false
     sharedPrefs.edit()
       .putBoolean("is_logged_in", false)
-      .remove("user_name")
-      .remove("user_email")
       .apply()
     logEvent("User logged out.")
   }

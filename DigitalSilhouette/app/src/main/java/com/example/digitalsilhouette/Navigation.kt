@@ -21,6 +21,9 @@ fun MainNavigation() {
   val repository = remember { DefaultDataRepository.getInstance(context) }
   val isLoggedIn by repository.isLoggedIn.collectAsStateWithLifecycle()
   val selectedTheme by repository.selectedTheme.collectAsStateWithLifecycle()
+  val userName by repository.userName.collectAsStateWithLifecycle()
+  val userEmail by repository.userEmail.collectAsStateWithLifecycle()
+  val userPassword by repository.userPassword.collectAsStateWithLifecycle()
 
   val currentTheme = remember(selectedTheme) {
     when (selectedTheme) {
@@ -42,10 +45,17 @@ fun MainNavigation() {
       entryProvider = entryProvider {
         entry<Login> {
           LoginScreen(
-            onLoginSuccess = { email, name ->
-              repository.loginUser(email, name)
+            onLoginSuccess = { email, name, password ->
+              repository.loginUser(email, name, password)
             },
             theme = currentTheme,
+            selectedTheme = selectedTheme,
+            onThemeSelected = { themeName ->
+              repository.setTheme(themeName)
+            },
+            initialName = userName,
+            initialEmail = userEmail,
+            initialPassword = userPassword,
             modifier = Modifier.safeDrawingPadding().padding(16.dp)
           )
         }

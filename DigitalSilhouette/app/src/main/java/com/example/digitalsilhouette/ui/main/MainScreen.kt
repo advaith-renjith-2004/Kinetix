@@ -9,21 +9,27 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +47,65 @@ import com.example.digitalsilhouette.data.FocusSession
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
+
+// Theme definition data class
+data class FocusTheme(
+  val background: Color,
+  val cardBg: Color,
+  val border: Color,
+  val accent: Color,
+  val pulseColor: Color,
+  val textPrimary: Color,
+  val textSecondary: Color,
+  val name: String
+)
+
+// Predefined premium themes
+object ThemePresets {
+  val AetherNeon = FocusTheme(
+    background = Color(0xFF070A0F),
+    cardBg = Color(0x1F142030),
+    border = Color(0x2B00E5FF),
+    accent = Color(0xFF00E5FF),
+    pulseColor = Color(0x0E00E5FF),
+    textPrimary = Color.White,
+    textSecondary = Color(0xFF788E9E),
+    name = "Aether Neon"
+  )
+
+  val Cyberpunk = FocusTheme(
+    background = Color(0xFF0C020B),
+    cardBg = Color(0x1F2B0424),
+    border = Color(0x2BFF007F),
+    accent = Color(0xFFFF007F),
+    pulseColor = Color(0x0EFF007F),
+    textPrimary = Color.White,
+    textSecondary = Color(0xFFAC8B9B),
+    name = "Cyberpunk"
+  )
+
+  val ForestOasis = FocusTheme(
+    background = Color(0xFF020D07),
+    cardBg = Color(0x1F0A2715),
+    border = Color(0x2B00F5D4),
+    accent = Color(0xFF00F5D4),
+    pulseColor = Color(0x0E00F5D4),
+    textPrimary = Color.White,
+    textSecondary = Color(0xFF7CA088),
+    name = "Forest Oasis"
+  )
+
+  val Obsidian = FocusTheme(
+    background = Color(0xFF070707),
+    cardBg = Color(0x1F1E1E1E),
+    border = Color(0x2BB0BEC5),
+    accent = Color(0xFFCFD8DC),
+    pulseColor = Color(0x0ECFD8DC),
+    textPrimary = Color.White,
+    textSecondary = Color(0xFF90A4AE),
+    name = "Obsidian"
+  )
+}
 
 @Composable
 fun MainScreen(
@@ -74,25 +139,48 @@ fun MainScreen(
   }
 
   Box(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(Color(0xFF070A0F)) // Very dark premium night-sky background
+    modifier = Modifier.fillMaxSize()
   ) {
     when (state) {
       MainScreenUiState.Loading -> {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF070A0F)),
+          contentAlignment = Alignment.Center
+        ) {
           CircularProgressIndicator(color = Color(0xFF00E5FF))
         }
       }
       is MainScreenUiState.Success -> {
-        MainScreenContent(
-          successState = state as MainScreenUiState.Success,
-          viewModel = viewModel,
-          modifier = modifier.fillMaxSize()
-        )
+        val successState = state as MainScreenUiState.Success
+        val currentTheme = when (successState.selectedTheme) {
+          "Cyberpunk" -> ThemePresets.Cyberpunk
+          "Forest Oasis" -> ThemePresets.ForestOasis
+          "Obsidian" -> ThemePresets.Obsidian
+          else -> ThemePresets.AetherNeon
+        }
+
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .background(currentTheme.background)
+        ) {
+          MainScreenContent(
+            successState = successState,
+            viewModel = viewModel,
+            theme = currentTheme,
+            modifier = modifier.fillMaxSize()
+          )
+        }
       }
       is MainScreenUiState.Error -> {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF070A0F)),
+          contentAlignment = Alignment.Center
+        ) {
           Text(
             text = "Error: ${(state as MainScreenUiState.Error).throwable.localizedMessage}",
             color = Color.Red,
@@ -104,11 +192,11 @@ fun MainScreen(
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MainScreenContent(
   successState: MainScreenUiState.Success,
   viewModel: MainScreenViewModel,
+  theme: FocusTheme,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -134,26 +222,34 @@ internal fun MainScreenContent(
   }
 
   Column(
-    modifier = modifier.padding(16.dp),
+    modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     // Header
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(12.dp))
     Text(
       text = "DIGITAL SILHOUETTE",
       fontSize = 24.sp,
       fontWeight = FontWeight.Bold,
       fontFamily = FontFamily.SansSerif,
-      color = Color.White,
+      color = theme.textPrimary,
       letterSpacing = 3.sp
     )
     Text(
       text = "Context-Aware Focus Space",
-      fontSize = 12.sp,
-      color = Color(0xFF788E9E),
+      fontSize = 11.sp,
+      color = theme.textSecondary,
       letterSpacing = 1.sp
     )
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Theme Selector Row
+    ThemeSelectorRow(
+      selectedTheme = successState.selectedTheme,
+      onThemeSelected = { viewModel.changeTheme(it) },
+      theme = theme
+    )
+    Spacer(modifier = Modifier.height(12.dp))
 
     // Permission Alerts Block
     if (!successState.hasNotificationPermission || !successState.hasDndPermission) {
@@ -172,75 +268,141 @@ internal fun MainScreenContent(
           }
         }
       )
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(12.dp))
     }
 
-    // Main Silhouette Shield Card
+    // Main Silhouette Shield Card with custom animations
     SilhouetteShield(
       isServiceRunning = successState.isServiceRunning,
       isFocusActive = successState.isFocusActive,
       elapsedSeconds = elapsedSeconds,
-      onToggleService = { viewModel.toggleService(context) }
+      onToggleService = { viewModel.toggleService(context) },
+      theme = theme
     )
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(12.dp))
 
     // Stats Section
-    StatsRow(sessions = successState.completedSessions)
-    Spacer(modifier = Modifier.height(20.dp))
+    StatsRow(sessions = successState.completedSessions, theme = theme)
+    Spacer(modifier = Modifier.height(12.dp))
 
-    // History Header
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Text(
-        text = "Session History",
-        color = Color.White,
-        fontSize = 16.sp,
-        fontWeight = FontWeight.SemiBold
-      )
-      if (successState.completedSessions.isNotEmpty()) {
-        IconButton(onClick = { viewModel.clearHistory() }) {
-          Text(
-            text = "🗑️",
-            fontSize = 18.sp
-          )
-        }
-      }
-    }
+    // Live Logs Terminal & History Tab Split
+    var activeTab by remember { mutableStateOf("logs") }
+    TabSelector(activeTab = activeTab, onTabSelected = { activeTab = it }, theme = theme)
     Spacer(modifier = Modifier.height(8.dp))
 
-    // History List
-    if (successState.completedSessions.isEmpty()) {
+    if (activeTab == "logs") {
+      LogTerminal(
+        logs = successState.sensorLogs,
+        onClearLogs = { viewModel.clearLogs() },
+        theme = theme,
+        modifier = Modifier.weight(1f)
+      )
+    } else {
+      HistoryList(
+        sessions = successState.completedSessions,
+        onClearHistory = { viewModel.clearHistory() },
+        theme = theme,
+        modifier = Modifier.weight(1f)
+      )
+    }
+  }
+}
+
+@Composable
+fun ThemeSelectorRow(
+  selectedTheme: String,
+  onThemeSelected: (String) -> Unit,
+  theme: FocusTheme
+) {
+  val themes = listOf("Aether Neon", "Cyberpunk", "Forest Oasis", "Obsidian")
+  LazyRow(
+    modifier = Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    items(themes) { name ->
+      val isSelected = selectedTheme == name
       Box(
         modifier = Modifier
-          .fillMaxWidth()
-          .weight(1f)
-          .clip(RoundedCornerShape(16.dp))
-          .background(Color(0x0DFFFFFF))
-          .padding(24.dp),
-        contentAlignment = Alignment.Center
+          .clip(RoundedCornerShape(8.dp))
+          .background(if (isSelected) theme.accent.copy(alpha = 0.15f) else Color.Transparent)
+          .border(
+            width = 1.dp,
+            color = if (isSelected) theme.accent else Color(0x1AFFFFFF),
+            shape = RoundedCornerShape(8.dp)
+          )
+          .clickable { onThemeSelected(name) }
+          .padding(horizontal = 12.dp, vertical = 6.dp)
       ) {
         Text(
-          text = "No focus sessions recorded yet.\nActivate the service and place your device face down to start.",
-          color = Color(0xFF627A8A),
-          fontSize = 13.sp,
-          textAlign = TextAlign.Center,
-          lineHeight = 20.sp
+          text = name,
+          fontSize = 11.sp,
+          fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+          color = if (isSelected) theme.accent else Color(0xFFB0BEC5)
         )
       }
-    } else {
-      LazyColumn(
-        modifier = Modifier
-          .fillMaxWidth()
-          .weight(1f),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        items(successState.completedSessions, key = { it.id }) { session ->
-          SessionHistoryItem(session = session)
-        }
-      }
+    }
+  }
+}
+
+@Composable
+fun TabSelector(
+  activeTab: String,
+  onTabSelected: (String) -> Unit,
+  theme: FocusTheme
+) {
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(12.dp))
+      .background(Color(0x0AFFFFFF))
+      .padding(4.dp),
+    horizontalArrangement = Arrangement.spacedBy(4.dp)
+  ) {
+    Box(
+      modifier = Modifier
+        .weight(1f)
+        .clip(RoundedCornerShape(8.dp))
+        .background(if (activeTab == "logs") theme.accent.copy(alpha = 0.1f) else Color.Transparent)
+        .border(
+          width = if (activeTab == "logs") 1.dp else 0.dp,
+          color = if (activeTab == "logs") theme.accent.copy(alpha = 0.4f) else Color.Transparent,
+          shape = RoundedCornerShape(8.dp)
+        )
+        .clickable { onTabSelected("logs") }
+        .padding(vertical = 8.dp),
+      contentAlignment = Alignment.Center
+    ) {
+      Text(
+        text = "LIVE SENSOR LOGS",
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = if (activeTab == "logs") theme.accent else theme.textSecondary,
+        letterSpacing = 1.sp
+      )
+    }
+
+    Box(
+      modifier = Modifier
+        .weight(1f)
+        .clip(RoundedCornerShape(8.dp))
+        .background(if (activeTab == "history") theme.accent.copy(alpha = 0.1f) else Color.Transparent)
+        .border(
+          width = if (activeTab == "history") 1.dp else 0.dp,
+          color = if (activeTab == "history") theme.accent.copy(alpha = 0.4f) else Color.Transparent,
+          shape = RoundedCornerShape(8.dp)
+        )
+        .clickable { onTabSelected("history") }
+        .padding(vertical = 8.dp),
+      contentAlignment = Alignment.Center
+    ) {
+      Text(
+        text = "SESSION HISTORY",
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = if (activeTab == "history") theme.accent else theme.textSecondary,
+        letterSpacing = 1.sp
+      )
     }
   }
 }
@@ -250,7 +412,8 @@ fun SilhouetteShield(
   isServiceRunning: Boolean,
   isFocusActive: Boolean,
   elapsedSeconds: Long,
-  onToggleService: () -> Unit
+  onToggleService: () -> Unit,
+  theme: FocusTheme
 ) {
   val infiniteTransition = rememberInfiniteTransition(label = "pulse")
   val pulseScale by infiniteTransition.animateFloat(
@@ -272,30 +435,34 @@ fun SilhouetteShield(
     label = "alpha"
   )
 
-  val cardBackground = if (isFocusActive) {
-    Brush.verticalGradient(listOf(Color(0xFF0F1E2E), Color(0xFF0A0F17)))
-  } else {
-    Brush.verticalGradient(listOf(Color(0xFF141923), Color(0xFF0A0C10)))
-  }
+  // Spinning radar angle
+  val rotationAngle by infiniteTransition.animateFloat(
+    initialValue = 0f,
+    targetValue = 360f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(3000, easing = LinearEasing),
+      repeatMode = RepeatMode.Restart
+    ),
+    label = "rotation"
+  )
 
-  val shieldColor = when {
-    isFocusActive -> Color(0xFF00E5FF)
-    isServiceRunning -> Color(0xFF00F5D4)
-    else -> Color(0xFF37474F)
+  val cardBackground = if (isFocusActive) {
+    Brush.verticalGradient(listOf(theme.accent.copy(alpha = 0.08f), Color.Transparent))
+  } else {
+    Brush.verticalGradient(listOf(Color(0x05FFFFFF), Color.Transparent))
   }
 
   Card(
-    modifier = Modifier
-      .fillMaxWidth(),
+    modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(24.dp),
-    border = BorderStroke(1.dp, Color(0x1AFFFFFF)),
-    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    border = BorderStroke(1.dp, theme.border),
+    colors = CardDefaults.cardColors(containerColor = theme.cardBg)
   ) {
     Box(
       modifier = Modifier
         .fillMaxWidth()
         .background(cardBackground)
-        .padding(24.dp),
+        .padding(20.dp),
       contentAlignment = Alignment.Center
     ) {
       Column(
@@ -304,31 +471,59 @@ fun SilhouetteShield(
       ) {
         // Shield Pulse Circle
         Box(
-          modifier = Modifier
-            .size(160.dp),
+          modifier = Modifier.size(160.dp),
           contentAlignment = Alignment.Center
         ) {
           if (isFocusActive) {
+            // Pulse Ring
             Box(
               modifier = Modifier
                 .fillMaxSize(pulseScale)
                 .clip(CircleShape)
-                .background(Color(0x1200E5FF))
-                .border(BorderStroke(2.dp, Color(0x3300E5FF)), CircleShape)
+                .background(theme.accent.copy(alpha = 0.06f))
+                .border(BorderStroke(2.dp, theme.accent.copy(alpha = 0.15f)), CircleShape)
             )
-            Box(
-              modifier = Modifier
-                .size(130.dp)
-                .clip(CircleShape)
-                .background(Color(0x0A00E5FF))
-                .border(BorderStroke(1.5.dp, Color(0x4D00E5FF).copy(alpha = pulseAlpha)), CircleShape)
-            )
+            // Animated Canvas Radar Sweep
+            Canvas(modifier = Modifier.size(140.dp)) {
+              val center = this.center
+              val radius = size.minDimension / 2f
+
+              // Draw radar boundary circle
+              drawCircle(
+                color = theme.accent.copy(alpha = 0.1f),
+                radius = radius,
+                style = Stroke(width = 1.dp.toPx())
+              )
+
+              // Draw sweeping line
+              val angleRad = Math.toRadians(rotationAngle.toDouble())
+              val lineEnd = Offset(
+                x = center.x + radius * Math.cos(angleRad).toFloat(),
+                y = center.y + radius * Math.sin(angleRad).toFloat()
+              )
+              drawLine(
+                color = theme.accent.copy(alpha = 0.8f),
+                start = center,
+                end = lineEnd,
+                strokeWidth = 2.dp.toPx()
+              )
+
+              // Draw radar sweep tail
+              drawArc(
+                color = theme.accent.copy(alpha = 0.08f),
+                startAngle = rotationAngle - 60f,
+                sweepAngle = 60f,
+                useCenter = true,
+                size = Size(radius * 2f, radius * 2f),
+                topLeft = Offset(center.x - radius, center.y - radius)
+              )
+            }
           } else if (isServiceRunning) {
             Box(
               modifier = Modifier
                 .size(140.dp)
                 .clip(CircleShape)
-                .border(BorderStroke(1.dp, Color(0x1F00F5D4)), CircleShape)
+                .border(BorderStroke(1.dp, theme.accent.copy(alpha = 0.15f)), CircleShape)
             )
           }
 
@@ -339,8 +534,8 @@ fun SilhouetteShield(
             modifier = Modifier
               .size(110.dp)
               .clip(CircleShape)
-              .background(Color(0xFF0D121A))
-              .border(BorderStroke(2.dp, shieldColor), CircleShape)
+              .background(Color(0xFF070A0F))
+              .border(BorderStroke(2.dp, theme.accent), CircleShape)
           ) {
             if (isFocusActive) {
               Text(
@@ -352,7 +547,7 @@ fun SilhouetteShield(
               )
               Text(
                 text = "FOCUSED",
-                color = Color(0xFF00E5FF),
+                color = theme.accent,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp
@@ -360,7 +555,7 @@ fun SilhouetteShield(
             } else {
               Text(
                 text = if (isServiceRunning) "IDLE" else "OFF",
-                color = if (isServiceRunning) Color(0xFF00F5D4) else Color(0xFF788E9E),
+                color = if (isServiceRunning) theme.accent else theme.textSecondary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
@@ -368,7 +563,7 @@ fun SilhouetteShield(
             }
           }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // State Text
         Text(
@@ -388,18 +583,18 @@ fun SilhouetteShield(
             isServiceRunning -> "Service is actively monitoring device position."
             else -> "Activate the tracker below to start."
           },
-          color = Color(0xFF788E9E),
+          color = theme.textSecondary,
           fontSize = 11.sp,
           textAlign = TextAlign.Center,
-          modifier = Modifier.padding(top = 4.dp)
+          modifier = Modifier.padding(top = 2.dp)
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Toggle Button
         Button(
           onClick = onToggleService,
           colors = ButtonDefaults.buttonColors(
-            containerColor = if (isServiceRunning) Color(0xFFE53935) else Color(0xFF00E5FF),
+            containerColor = if (isServiceRunning) Color(0xFFE53935) else theme.accent,
             contentColor = if (isServiceRunning) Color.White else Color.Black
           ),
           shape = RoundedCornerShape(12.dp),
@@ -427,7 +622,7 @@ fun PermissionAlertCard(
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0x33FFA726)), // Warm translucent orange
+    colors = CardDefaults.cardColors(containerColor = Color(0x33FFA726)), // Warm orange
     border = BorderStroke(1.dp, Color(0xFFFFA726).copy(alpha = 0.3f))
   ) {
     Column(modifier = Modifier.padding(16.dp)) {
@@ -444,13 +639,13 @@ fun PermissionAlertCard(
           fontWeight = FontWeight.Bold
         )
       }
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(6.dp))
       Text(
         text = "Permissions are required for the app to function properly. Please grant:",
         color = Color(0xFFECEFF1),
         fontSize = 12.sp
       )
-      Spacer(modifier = Modifier.height(12.dp))
+      Spacer(modifier = Modifier.height(10.dp))
 
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!hasNotification) {
@@ -485,7 +680,7 @@ fun PermissionAlertCard(
 }
 
 @Composable
-fun StatsRow(sessions: List<FocusSession>) {
+fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
   val totalDuration = sessions.sumOf { it.durationSeconds }
   val totalMinutes = totalDuration / 60
   val totalHours = totalMinutes / 60
@@ -504,80 +699,218 @@ fun StatsRow(sessions: List<FocusSession>) {
     Card(
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF)),
-      border = BorderStroke(1.dp, Color(0x0AFFFFFF))
+      colors = CardDefaults.cardColors(containerColor = Color(0x0CFFFFFF)),
+      border = BorderStroke(1.dp, Color(0x05FFFFFF))
     ) {
       Column(
-        modifier = Modifier.padding(16.dp),
+        modifier = Modifier.padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Text(text = "TOTAL FOCUS TIME", fontSize = 10.sp, color = Color(0xFF788E9E), fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = durationText, fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(text = "TOTAL FOCUS TIME", fontSize = 9.sp, color = theme.textSecondary, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(text = durationText, fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
       }
     }
 
     Card(
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF)),
-      border = BorderStroke(1.dp, Color(0x0AFFFFFF))
+      colors = CardDefaults.cardColors(containerColor = Color(0x0CFFFFFF)),
+      border = BorderStroke(1.dp, Color(0x05FFFFFF))
     ) {
       Column(
-        modifier = Modifier.padding(16.dp),
+        modifier = Modifier.padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Text(text = "COMPLETED SESSIONS", fontSize = 10.sp, color = Color(0xFF788E9E), fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "${sessions.size}", fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(text = "COMPLETED SESSIONS", fontSize = 9.sp, color = theme.textSecondary, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(text = "${sessions.size}", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
       }
     }
   }
 }
 
 @Composable
-fun SessionHistoryItem(session: FocusSession) {
-  val formatter = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
-  val dateText = formatter.format(Date(session.startTime))
+fun LogTerminal(
+  logs: List<String>,
+  onClearLogs: () -> Unit,
+  theme: FocusTheme,
+  modifier: Modifier = Modifier
+) {
+  val listState = rememberLazyListState()
 
-  val durationText = if (session.durationSeconds >= 60) {
-    "${session.durationSeconds / 60}m ${session.durationSeconds % 60}s"
-  } else {
-    "${session.durationSeconds}s"
+  // Scroll to bottom when logs size changes
+  LaunchedEffect(logs.size) {
+    if (logs.isNotEmpty()) {
+      listState.animateScrollToItem(logs.size - 1)
+    }
   }
 
   Card(
-    modifier = Modifier.fillMaxWidth(),
-    shape = RoundedCornerShape(12.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0x14FFFFFF)),
-    border = BorderStroke(1.dp, Color(0x05FFFFFF))
+    modifier = modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(16.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFF040609)),
+    border = BorderStroke(1.dp, theme.border)
+  ) {
+    Column(modifier = Modifier.padding(12.dp)) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text(
+          text = "live_sensor_feed.log",
+          color = theme.accent,
+          fontFamily = FontFamily.Monospace,
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Bold
+        )
+        Text(
+          text = "CLEAR LOGS",
+          color = Color(0xFFE57373),
+          fontSize = 9.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = FontFamily.Monospace,
+          modifier = Modifier
+            .clickable { onClearLogs() }
+            .padding(4.dp)
+        )
+      }
+      Spacer(modifier = Modifier.height(8.dp))
+      Divider(color = theme.border.copy(alpha = 0.2f), modifier = Modifier.fillMaxWidth())
+      Spacer(modifier = Modifier.height(8.dp))
+
+      if (logs.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+          Text(
+            text = "No logs recorded.",
+            color = theme.textSecondary.copy(alpha = 0.5f),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp
+          )
+        }
+      } else {
+        LazyColumn(
+          state = listState,
+          modifier = Modifier.fillMaxSize(),
+          verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+          items(logs) { log ->
+            Text(
+              text = log,
+              color = theme.accent.copy(alpha = 0.9f),
+              fontFamily = FontFamily.Monospace,
+              fontSize = 10.sp,
+              lineHeight = 14.sp
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+fun HistoryList(
+  sessions: List<FocusSession>,
+  onClearHistory: () -> Unit,
+  theme: FocusTheme,
+  modifier: Modifier = Modifier
+) {
+  Column(
+    modifier = modifier.fillMaxWidth()
   ) {
     Row(
-      modifier = Modifier
-        .padding(horizontal = 16.dp, vertical = 12.dp)
-        .fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically
     ) {
-      Column {
-        Text(
-          text = dateText,
-          color = Color(0xFFECEFF1),
-          fontSize = 13.sp,
-          fontWeight = FontWeight.Medium
-        )
-        Text(
-          text = "Gravity Trigger Focus",
-          color = Color(0xFF788E9E),
-          fontSize = 10.sp
-        )
-      }
       Text(
-        text = durationText,
-        color = Color(0xFF00E5FF),
-        fontSize = 14.sp,
+        text = "Recorded Sessions",
+        color = theme.textSecondary,
+        fontSize = 12.sp,
         fontWeight = FontWeight.Bold
       )
+      if (sessions.isNotEmpty()) {
+        IconButton(
+          onClick = onClearHistory,
+          modifier = Modifier.size(28.dp)
+        ) {
+          Text("🗑️", fontSize = 16.sp)
+        }
+      }
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+
+    if (sessions.isEmpty()) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .fillMaxHeight()
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0x06FFFFFF))
+          .padding(24.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Text(
+          text = "No focus sessions recorded yet.\nActivate the service and place your device face down to start.",
+          color = theme.textSecondary.copy(alpha = 0.6f),
+          fontSize = 12.sp,
+          textAlign = TextAlign.Center,
+          lineHeight = 18.sp
+        )
+      }
+    } else {
+      LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        items(sessions, key = { it.id }) { session ->
+          val formatter = remember { SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()) }
+          val dateText = formatter.format(Date(session.startTime))
+
+          val durationText = if (session.durationSeconds >= 60) {
+            "${session.durationSeconds / 60}m ${session.durationSeconds % 60}s"
+          } else {
+            "${session.durationSeconds}s"
+          }
+
+          Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF)),
+            border = BorderStroke(1.dp, Color(0x05FFFFFF))
+          ) {
+            Row(
+              modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Column {
+                Text(
+                  text = dateText,
+                  color = Color(0xFFECEFF1),
+                  fontSize = 13.sp,
+                  fontWeight = FontWeight.Medium
+                )
+                Text(
+                  text = "Gravity Trigger Focus",
+                  color = theme.textSecondary,
+                  fontSize = 10.sp
+                )
+              }
+              Text(
+                text = durationText,
+                color = theme.accent,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
+          }
+        }
+      }
     }
   }
 }

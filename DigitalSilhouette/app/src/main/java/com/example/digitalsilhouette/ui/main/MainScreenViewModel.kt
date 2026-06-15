@@ -24,6 +24,8 @@ class MainScreenViewModel(
   val isFocusActive: StateFlow<Boolean> = repository.isFocusActive
   val currentSessionStartTime: StateFlow<Long?> = repository.currentSessionStartTime
   val completedSessions: StateFlow<List<FocusSession>> = repository.completedSessions
+  val selectedTheme: StateFlow<String> = repository.selectedTheme
+  val sensorLogs: StateFlow<List<String>> = repository.sensorLogs
 
   private val _hasNotificationPermission = MutableStateFlow(true)
   val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission.asStateFlow()
@@ -37,7 +39,9 @@ class MainScreenViewModel(
     currentSessionStartTime,
     completedSessions,
     hasNotificationPermission,
-    hasDndPermission
+    hasDndPermission,
+    selectedTheme,
+    sensorLogs
   ) { array ->
     val serviceRunning = array[0] as Boolean
     val focusActive = array[1] as Boolean
@@ -46,13 +50,18 @@ class MainScreenViewModel(
     val sessions = array[3] as List<FocusSession>
     val notifPerm = array[4] as Boolean
     val dndPerm = array[5] as Boolean
+    val theme = array[6] as String
+    @Suppress("UNCHECKED_CAST")
+    val logs = array[7] as List<String>
     MainScreenUiState.Success(
       isServiceRunning = serviceRunning,
       isFocusActive = focusActive,
       currentSessionStartTime = startTime,
       completedSessions = sessions,
       hasNotificationPermission = notifPerm,
-      hasDndPermission = dndPerm
+      hasDndPermission = dndPerm,
+      selectedTheme = theme,
+      sensorLogs = logs
     )
   }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
 
@@ -86,6 +95,14 @@ class MainScreenViewModel(
     }
   }
 
+  fun changeTheme(themeName: String) {
+    repository.setTheme(themeName)
+  }
+
+  fun clearLogs() {
+    repository.clearLogs()
+  }
+
   fun clearHistory() {
     repository.clearHistory()
   }
@@ -100,7 +117,9 @@ sealed interface MainScreenUiState {
     val currentSessionStartTime: Long?,
     val completedSessions: List<FocusSession>,
     val hasNotificationPermission: Boolean,
-    val hasDndPermission: Boolean
+    val hasDndPermission: Boolean,
+    val selectedTheme: String,
+    val sensorLogs: List<String>
   ) : MainScreenUiState
 
   data class Error(val throwable: Throwable) : MainScreenUiState

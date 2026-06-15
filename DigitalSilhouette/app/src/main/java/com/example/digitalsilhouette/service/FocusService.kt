@@ -29,7 +29,7 @@ class FocusService : Service(), SensorEventListener {
 
   // Debouncing variables
   private val DEBOUNCE_TIME_MS = 2000L
-  private val MIN_SESSION_DURATION_SEC = 5L // Low duration for testing/MVP
+  private val MIN_SESSION_DURATION_SEC = 5L
 
   private var tempFaceDown = false
   private var faceDownTimeStart = 0L
@@ -54,10 +54,11 @@ class FocusService : Service(), SensorEventListener {
     startServiceForeground()
     registerSensor()
     repository.setServiceRunning(true)
+    repository.logEvent("Service created. Registering orientation sensors.")
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    // Keep service running
+    repository.logEvent("Service started via StartCommand.")
     return START_STICKY
   }
 
@@ -66,11 +67,15 @@ class FocusService : Service(), SensorEventListener {
   private fun registerSensor() {
     accelerometer?.let {
       sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+      repository.logEvent("Registered Accelerometer listener.")
+    } ?: run {
+      repository.logEvent("Error: Accelerometer not supported on this device.")
     }
   }
 
   private fun unregisterSensor() {
     sensorManager.unregisterListener(this)
+    repository.logEvent("Unregistered Accelerometer listener.")
   }
 
   override fun onSensorChanged(event: SensorEvent) {
@@ -90,6 +95,7 @@ class FocusService : Service(), SensorEventListener {
       if (!tempFaceDown) {
         tempFaceDown = true
         faceDownTimeStart = currentTime
+        repository.logEvent("Flat face-down position detected (z=${String.format("%.2f", z)}). Debouncing...")
       } else if (currentTime - faceDownTimeStart >= DEBOUNCE_TIME_MS) {
         if (!isFocusActive) {
           startFocusSession()
@@ -100,6 +106,9 @@ class FocusService : Service(), SensorEventListener {
       if (!tempFaceUp) {
         tempFaceUp = true
         faceUpTimeStart = currentTime
+        if (isFocusActive) {
+          repository.logEvent("Device orientation changed. Debouncing lift detection...")
+        }
       } else if (currentTime - faceUpTimeStart >= DEBOUNCE_TIME_MS) {
         if (isFocusActive) {
           stopFocusSession()
@@ -110,7 +119,7 @@ class FocusService : Service(), SensorEventListener {
   }
 
   override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-    // No-op
+    repository.logEvent("Sensor accuracy changed: $accuracy")
   }
 
   private fun startFocusSession() {
@@ -119,6 +128,7 @@ class FocusService : Service(), SensorEventListener {
     systemMuter.mute()
     repository.setFocusActive(true, sessionStartTime)
     updateForegroundNotification("Deep Work Active", "Muting notifications. Flip over to finish.")
+    repository.logEvent("Focus mode entered. Muting system notifications.")
   }
 
   private fun stopFocusSession() {
@@ -128,10 +138,13 @@ class FocusService : Service(), SensorEventListener {
     systemMuter.unmute()
     repository.setFocusActive(false, null)
     updateForegroundNotification("Monitoring Active", "Place device face-down to start deep work.")
+    repository.logEvent("Focus mode ended. Restoring system sounds. Elapsed: ${durationSeconds}s.")
 
     if (durationSeconds >= MIN_SESSION_DURATION_SEC) {
       repository.addSession(sessionStartTime, endTime, durationSeconds)
       showSessionSummaryNotification(durationSeconds)
+    } else {
+      repository.logEvent("Session discarded. Duration was less than minimum ${MIN_SESSION_DURATION_SEC}s.")
     }
 
     sessionStartTime = 0
@@ -203,6 +216,7 @@ class FocusService : Service(), SensorEventListener {
     }
     unregisterSensor()
     repository.setServiceRunning(false)
+    repository.logEvent("Service destroyed. System offline.")
     super.onDestroy()
   }
 }

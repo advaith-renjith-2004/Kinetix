@@ -6,18 +6,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
+import java.text.SimpleDateFormat
+import java.util.*
 
 interface DataRepository {
   val isServiceRunning: StateFlow<Boolean>
   val isFocusActive: StateFlow<Boolean>
   val currentSessionStartTime: StateFlow<Long?>
   val completedSessions: StateFlow<List<FocusSession>>
+  val selectedTheme: StateFlow<String>
+  val sensorLogs: StateFlow<List<String>>
 
   fun setServiceRunning(running: Boolean)
   fun setFocusActive(active: Boolean, startTime: Long?)
   fun addSession(startTime: Long, endTime: Long, durationSeconds: Long)
   fun clearHistory()
+  fun logEvent(event: String)
+  fun setTheme(themeName: String)
+  fun clearLogs()
 }
 
 class DefaultDataRepository(private val context: Context) : DataRepository {
@@ -35,17 +41,26 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
   private val _completedSessions = MutableStateFlow<List<FocusSession>>(emptyList())
   override val completedSessions: StateFlow<List<FocusSession>> = _completedSessions.asStateFlow()
 
+  private val _selectedTheme = MutableStateFlow(sharedPrefs.getString("selected_theme", "Aether Neon") ?: "Aether Neon")
+  override val selectedTheme: StateFlow<String> = _selectedTheme.asStateFlow()
+
+  private val _sensorLogs = MutableStateFlow<List<String>>(emptyList())
+  override val sensorLogs: StateFlow<List<String>> = _sensorLogs.asStateFlow()
+
   init {
     loadSessions()
+    logEvent("System initialized. Welcome to Digital Silhouette.")
   }
 
   override fun setServiceRunning(running: Boolean) {
     _isServiceRunning.value = running
+    logEvent(if (running) "Focus Service started." else "Focus Service stopped.")
   }
 
   override fun setFocusActive(active: Boolean, startTime: Long?) {
     _isFocusActive.value = active
     _currentSessionStartTime.value = startTime
+    logEvent(if (active) "Focus Session Active. System silenced." else "Focus Session Ended. Ringer restored.")
   }
 
   override fun addSession(startTime: Long, endTime: Long, durationSeconds: Long) {
@@ -56,15 +71,39 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
       durationSeconds = durationSeconds
     )
     val updatedList = _completedSessions.value.toMutableList().apply {
-      add(0, newSession) // Add to the top of the history list
+      add(0, newSession) // Add to top
     }
     _completedSessions.value = updatedList
     saveSessions(updatedList)
+    logEvent("Saved Focus Session: ${durationSeconds}s completed.")
   }
 
   override fun clearHistory() {
     _completedSessions.value = emptyList()
     sharedPrefs.edit().remove("completed_sessions").apply()
+    logEvent("Session history cleared.")
+  }
+
+  override fun logEvent(event: String) {
+    val timeFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    val timestamp = timeFormat.format(Date())
+    val logLine = "[$timestamp] $event"
+    val currentList = _sensorLogs.value.toMutableList()
+    currentList.add(logLine)
+    if (currentList.size > 50) {
+      currentList.removeAt(0)
+    }
+    _sensorLogs.value = currentList
+  }
+
+  override fun setTheme(themeName: String) {
+    _selectedTheme.value = themeName
+    sharedPrefs.edit().putString("selected_theme", themeName).apply()
+    logEvent("Theme changed to: $themeName")
+  }
+
+  override fun clearLogs() {
+    _sensorLogs.value = emptyList()
   }
 
   private fun loadSessions() {

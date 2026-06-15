@@ -2,7 +2,7 @@
   <img src="DigitalSilhouette/app/src/main/res/drawable/app_logo.png" alt="Kinetix Logo" width="120" />
   <br/>
   
-# ✨ Kinetix
+# Kinetix
 
 *Your quiet corner of the internet.*
 
@@ -11,7 +11,7 @@
 
 </div>
 
-## 👋 Hello there!
+## Hello there!
 
 Welcome to **Kinetix**. We built this app because we believe your phone should work *for* you, not against you. In a world full of constant pings, rings, and notifications, finding focus can feel impossible. 
 
@@ -21,22 +21,22 @@ No robotic menus. No corporate jargon. Just a warm, human-centric app that under
 
 ---
 
-## 🌟 What makes it special?
+## What makes it special?
 
-- **🛡️ The "Flip-to-Focus" Shield**
+- **The "Flip-to-Focus" Shield**
   Just place your phone face down on your desk. That's it. Kinetix uses your device's accelerometer to instantly silence distractions. When you pick it back up, everything goes back to normal.
-- **🎨 Themes that feel right**
-  Whether you're a `Neon ⚡` night owl or a `Forest 🌿` morning person, Kinetix has a hand-tuned color palette just for you.
-- **🔥 Celebrate your streaks**
+- **Themes that feel right**
+  Whether you're a Neon night owl or a Forest morning person, Kinetix has a hand-tuned color palette just for you.
+- **Celebrate your streaks**
   Every minute of focus compounds over time. Kinetix tracks your consecutive days of deep work to help you build a lasting habit, cheering you on every step of the way.
-- **☀️ It knows the time of day**
-  Open the app and you'll be greeted with a warm "Good morning ☀️" or "Late night 🌙", along with a fresh motivational quote to spark your productivity.
-- **🔒 Privacy is a promise**
+- **It knows the time of day**
+  Open the app and you'll be greeted with a warm "Good morning" or "Late night", along with a fresh motivational quote to spark your productivity.
+- **Privacy is a promise**
   All sensor tracking and audio metering happen 100% on your device. We don't send your data anywhere because frankly, it's none of our business.
 
 ---
 
-## 🛠️ For the developers
+## For the developers
 
 We poured a lot of love into the technical foundation of Kinetix:
 
@@ -58,7 +58,7 @@ It's super simple to get started:
 
 ---
 
-## 🤝 Join the journey
+## Join the journey
 
 We'd love your help in making Kinetix even better! If you have an idea, find a bug, or just want to say hi, feel free to open an issue or submit a pull request.
 

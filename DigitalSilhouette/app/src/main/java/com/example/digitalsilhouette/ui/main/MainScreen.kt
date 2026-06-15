@@ -187,6 +187,15 @@ internal fun MainScreenContent(
     viewModel.checkPermissions(context)
   }
 
+  val multiplePermissionsLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions()
+  ) { permissions ->
+    val allGranted = permissions.entries.all { it.value }
+    if (allGranted) {
+      viewModel.toggleService(context)
+    }
+  }
+
   // Format Elapsed Time
   var elapsedSeconds by remember { mutableStateOf(0L) }
   LaunchedEffect(successState.isFocusActive, successState.currentSessionStartTime) {
@@ -310,7 +319,29 @@ internal fun MainScreenContent(
         isServiceRunning = successState.isServiceRunning,
         isFocusActive = successState.isFocusActive,
         elapsedSeconds = elapsedSeconds,
-        onToggleService = { viewModel.toggleService(context) },
+        onToggleService = {
+          if (!successState.isServiceRunning) {
+            val permissions = mutableListOf(
+              android.Manifest.permission.ACCESS_FINE_LOCATION,
+              android.Manifest.permission.RECORD_AUDIO
+            )
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+              permissions.add(android.Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+            
+            val missingPermissions = permissions.filter {
+              androidx.core.content.ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+            
+            if (missingPermissions.isNotEmpty()) {
+              multiplePermissionsLauncher.launch(missingPermissions.toTypedArray())
+            } else {
+              viewModel.toggleService(context)
+            }
+          } else {
+            viewModel.toggleService(context)
+          }
+        },
         theme = theme
       )
     }

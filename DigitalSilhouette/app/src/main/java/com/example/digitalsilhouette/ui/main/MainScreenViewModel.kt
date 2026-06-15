@@ -91,14 +91,30 @@ class MainScreenViewModel(
   }
 
   fun toggleService(context: Context) {
-    val intent = Intent(context, FocusService::class.java)
     if (isServiceRunning.value) {
-      context.stopService(intent)
+      // Stop tracking
+      repository.setServiceRunning(false)
+      repository.logEvent("Activity tracking stopped.")
     } else {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        context.startForegroundService(intent)
-      } else {
+      // Start tracking
+      if (androidx.core.app.ActivityCompat.checkSelfPermission(
+          context, 
+          android.Manifest.permission.ACTIVITY_RECOGNITION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        
+        repository.setServiceRunning(true)
+        repository.logEvent("Activity tracking started. Waiting for STILL state.")
+        
+        // MOCK: Since we cannot fetch play-services-location in this offline build environment,
+        // we simulate the OS ActivityRecognition API detecting a "STILL" transition immediately.
+        repository.logEvent("[MOCK] Simulating OS Activity Recognition: STILL detected.")
+        val intent = Intent(context, com.example.digitalsilhouette.service.FocusService::class.java).apply {
+            action = com.example.digitalsilhouette.service.FocusService.ACTION_CHECK_ENVIRONMENT
+        }
         context.startService(intent)
+        
+      } else {
+        repository.logEvent("Missing ACTIVITY_RECOGNITION permission.")
       }
     }
   }

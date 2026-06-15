@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.digitalsilhouette.theme.FocusTheme
+import com.example.digitalsilhouette.theme.Domine
 
 @Composable
 fun LoginScreen(
@@ -100,7 +101,7 @@ fun LoginScreen(
           text = "SILHOUETTE",
           fontSize = 28.sp,
           fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.SansSerif,
+          fontFamily = Domine,
           color = theme.textPrimary,
           letterSpacing = 4.sp
         )

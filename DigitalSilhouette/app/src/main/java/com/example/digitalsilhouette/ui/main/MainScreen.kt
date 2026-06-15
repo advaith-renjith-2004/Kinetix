@@ -50,6 +50,7 @@ import java.util.*
 
 import com.example.digitalsilhouette.theme.FocusTheme
 import com.example.digitalsilhouette.theme.ThemePresets
+import com.example.digitalsilhouette.theme.Domine
 
 @Composable
 fun MainScreen(
@@ -182,7 +183,7 @@ internal fun MainScreenContent(
           text = "DIGITAL SILHOUETTE",
           fontSize = 22.sp,
           fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.SansSerif,
+          fontFamily = Domine,
           color = theme.textPrimary,
           letterSpacing = 2.sp
         )

@@ -26,6 +26,8 @@ class MainScreenViewModel(
   val completedSessions: StateFlow<List<FocusSession>> = repository.completedSessions
   val selectedTheme: StateFlow<String> = repository.selectedTheme
   val sensorLogs: StateFlow<List<String>> = repository.sensorLogs
+  val userName: StateFlow<String> = repository.userName
+  val userEmail: StateFlow<String> = repository.userEmail
 
   private val _hasNotificationPermission = MutableStateFlow(true)
   val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission.asStateFlow()
@@ -41,7 +43,9 @@ class MainScreenViewModel(
     hasNotificationPermission,
     hasDndPermission,
     selectedTheme,
-    sensorLogs
+    sensorLogs,
+    userName,
+    userEmail
   ) { array ->
     val serviceRunning = array[0] as Boolean
     val focusActive = array[1] as Boolean
@@ -53,6 +57,8 @@ class MainScreenViewModel(
     val theme = array[6] as String
     @Suppress("UNCHECKED_CAST")
     val logs = array[7] as List<String>
+    val name = array[8] as String
+    val email = array[9] as String
     MainScreenUiState.Success(
       isServiceRunning = serviceRunning,
       isFocusActive = focusActive,
@@ -61,7 +67,9 @@ class MainScreenViewModel(
       hasNotificationPermission = notifPerm,
       hasDndPermission = dndPerm,
       selectedTheme = theme,
-      sensorLogs = logs
+      sensorLogs = logs,
+      userName = name,
+      userEmail = email
     )
   }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
 
@@ -106,6 +114,10 @@ class MainScreenViewModel(
   fun clearHistory() {
     repository.clearHistory()
   }
+
+  fun logoutUser() {
+    repository.logoutUser()
+  }
 }
 
 sealed interface MainScreenUiState {
@@ -119,7 +131,9 @@ sealed interface MainScreenUiState {
     val hasNotificationPermission: Boolean,
     val hasDndPermission: Boolean,
     val selectedTheme: String,
-    val sensorLogs: List<String>
+    val sensorLogs: List<String>,
+    val userName: String,
+    val userEmail: String
   ) : MainScreenUiState
 
   data class Error(val throwable: Throwable) : MainScreenUiState

@@ -105,6 +105,17 @@ object ThemePresets {
     textSecondary = Color(0xFF90A4AE),
     name = "Obsidian"
   )
+
+  val SnowDrift = FocusTheme(
+    background = Color(0xFFF0F3F6),
+    cardBg = Color(0xFFFFFFFF),
+    border = Color(0xFFD0D7DE),
+    accent = Color(0xFF007AFF),
+    pulseColor = Color(0x0E007AFF),
+    textPrimary = Color(0xFF1F2328),
+    textSecondary = Color(0xFF656D76),
+    name = "Snow Drift"
+  )
 }
 
 @Composable
@@ -158,6 +169,7 @@ fun MainScreen(
           "Cyberpunk" -> ThemePresets.Cyberpunk
           "Forest Oasis" -> ThemePresets.ForestOasis
           "Obsidian" -> ThemePresets.Obsidian
+          "Snow Drift" -> ThemePresets.SnowDrift
           else -> ThemePresets.AetherNeon
         }
 
@@ -227,20 +239,34 @@ internal fun MainScreenContent(
   ) {
     // Header
     Spacer(modifier = Modifier.height(12.dp))
-    Text(
-      text = "DIGITAL SILHOUETTE",
-      fontSize = 24.sp,
-      fontWeight = FontWeight.Bold,
-      fontFamily = FontFamily.SansSerif,
-      color = theme.textPrimary,
-      letterSpacing = 3.sp
-    )
-    Text(
-      text = "Context-Aware Focus Space",
-      fontSize = 11.sp,
-      color = theme.textSecondary,
-      letterSpacing = 1.sp
-    )
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+          text = "DIGITAL SILHOUETTE",
+          fontSize = 22.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = FontFamily.SansSerif,
+          color = theme.textPrimary,
+          letterSpacing = 2.sp
+        )
+        Text(
+          text = "Welcome back, ${successState.userName}! (${successState.userEmail})",
+          fontSize = 11.sp,
+          color = theme.textSecondary,
+          letterSpacing = 0.5.sp
+        )
+      }
+      IconButton(
+        onClick = { viewModel.logoutUser() },
+        modifier = Modifier.size(36.dp)
+      ) {
+        Text("🚪", fontSize = 20.sp)
+      }
+    }
     Spacer(modifier = Modifier.height(16.dp))
 
     // Theme Selector Row
@@ -314,7 +340,7 @@ fun ThemeSelectorRow(
   onThemeSelected: (String) -> Unit,
   theme: FocusTheme
 ) {
-  val themes = listOf("Aether Neon", "Cyberpunk", "Forest Oasis", "Obsidian")
+  val themes = listOf("Aether Neon", "Cyberpunk", "Forest Oasis", "Obsidian", "Snow Drift")
   LazyRow(
     modifier = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceBetween,
@@ -328,7 +354,7 @@ fun ThemeSelectorRow(
           .background(if (isSelected) theme.accent.copy(alpha = 0.15f) else Color.Transparent)
           .border(
             width = 1.dp,
-            color = if (isSelected) theme.accent else Color(0x1AFFFFFF),
+            color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.2f),
             shape = RoundedCornerShape(8.dp)
           )
           .clickable { onThemeSelected(name) }
@@ -338,7 +364,7 @@ fun ThemeSelectorRow(
           text = name,
           fontSize = 11.sp,
           fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-          color = if (isSelected) theme.accent else Color(0xFFB0BEC5)
+          color = if (isSelected) theme.accent else theme.textSecondary
         )
       }
     }
@@ -355,7 +381,7 @@ fun TabSelector(
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(12.dp))
-      .background(Color(0x0AFFFFFF))
+      .background(theme.textSecondary.copy(alpha = 0.1f))
       .padding(4.dp),
     horizontalArrangement = Arrangement.spacedBy(4.dp)
   ) {
@@ -534,13 +560,13 @@ fun SilhouetteShield(
             modifier = Modifier
               .size(110.dp)
               .clip(CircleShape)
-              .background(Color(0xFF070A0F))
+              .background(theme.background)
               .border(BorderStroke(2.dp, theme.accent), CircleShape)
           ) {
             if (isFocusActive) {
               Text(
                 text = String.format("%02d:%02d", elapsedSeconds / 60, elapsedSeconds % 60),
-                color = Color.White,
+                color = theme.textPrimary,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
@@ -572,7 +598,7 @@ fun SilhouetteShield(
             isServiceRunning -> "Listening. Flip face-down on a desk to focus."
             else -> "Digital Silhouette is Disabled"
           },
-          color = Color.White,
+          color = theme.textPrimary,
           fontSize = 14.sp,
           fontWeight = FontWeight.Medium,
           textAlign = TextAlign.Center
@@ -595,7 +621,7 @@ fun SilhouetteShield(
           onClick = onToggleService,
           colors = ButtonDefaults.buttonColors(
             containerColor = if (isServiceRunning) Color(0xFFE53935) else theme.accent,
-            contentColor = if (isServiceRunning) Color.White else Color.Black
+            contentColor = if (isServiceRunning || theme.name == "Snow Drift") Color.White else Color.Black
           ),
           shape = RoundedCornerShape(12.dp),
           contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
@@ -699,8 +725,8 @@ fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
     Card(
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = Color(0x0CFFFFFF)),
-      border = BorderStroke(1.dp, Color(0x05FFFFFF))
+      colors = CardDefaults.cardColors(containerColor = theme.cardBg),
+      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.3f))
     ) {
       Column(
         modifier = Modifier.padding(12.dp),
@@ -708,15 +734,15 @@ fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
       ) {
         Text(text = "TOTAL FOCUS TIME", fontSize = 9.sp, color = theme.textSecondary, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(2.dp))
-        Text(text = durationText, fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(text = durationText, fontSize = 16.sp, color = theme.textPrimary, fontWeight = FontWeight.Bold)
       }
     }
 
     Card(
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
-      colors = CardDefaults.cardColors(containerColor = Color(0x0CFFFFFF)),
-      border = BorderStroke(1.dp, Color(0x05FFFFFF))
+      colors = CardDefaults.cardColors(containerColor = theme.cardBg),
+      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.3f))
     ) {
       Column(
         modifier = Modifier.padding(12.dp),
@@ -724,7 +750,7 @@ fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
       ) {
         Text(text = "COMPLETED SESSIONS", fontSize = 9.sp, color = theme.textSecondary, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(2.dp))
-        Text(text = "${sessions.size}", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        Text(text = "${sessions.size}", fontSize = 16.sp, color = theme.textPrimary, fontWeight = FontWeight.Bold)
       }
     }
   }
@@ -749,7 +775,7 @@ fun LogTerminal(
   Card(
     modifier = modifier.fillMaxWidth(),
     shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = Color(0xFF040609)),
+    colors = CardDefaults.cardColors(containerColor = if (theme.name == "Snow Drift") Color(0xFFE2E8F0) else Color(0xFF040609)),
     border = BorderStroke(1.dp, theme.border)
   ) {
     Column(modifier = Modifier.padding(12.dp)) {
@@ -848,7 +874,7 @@ fun HistoryList(
           .fillMaxWidth()
           .fillMaxHeight()
           .clip(RoundedCornerShape(16.dp))
-          .background(Color(0x06FFFFFF))
+          .background(theme.textSecondary.copy(alpha = 0.05f))
           .padding(24.dp),
         contentAlignment = Alignment.Center
       ) {
@@ -878,8 +904,8 @@ fun HistoryList(
           Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0x0DFFFFFF)),
-            border = BorderStroke(1.dp, Color(0x05FFFFFF))
+            colors = CardDefaults.cardColors(containerColor = theme.cardBg),
+            border = BorderStroke(1.dp, theme.border.copy(alpha = 0.3f))
           ) {
             Row(
               modifier = Modifier
@@ -891,7 +917,7 @@ fun HistoryList(
               Column {
                 Text(
                   text = dateText,
-                  color = Color(0xFFECEFF1),
+                  color = theme.textPrimary,
                   fontSize = 13.sp,
                   fontWeight = FontWeight.Medium
                 )

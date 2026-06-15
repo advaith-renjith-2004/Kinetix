@@ -16,6 +16,9 @@ interface DataRepository {
   val completedSessions: StateFlow<List<FocusSession>>
   val selectedTheme: StateFlow<String>
   val sensorLogs: StateFlow<List<String>>
+  val isLoggedIn: StateFlow<Boolean>
+  val userName: StateFlow<String>
+  val userEmail: StateFlow<String>
 
   fun setServiceRunning(running: Boolean)
   fun setFocusActive(active: Boolean, startTime: Long?)
@@ -24,6 +27,8 @@ interface DataRepository {
   fun logEvent(event: String)
   fun setTheme(themeName: String)
   fun clearLogs()
+  fun loginUser(email: String, name: String)
+  fun logoutUser()
 }
 
 class DefaultDataRepository(private val context: Context) : DataRepository {
@@ -46,6 +51,15 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
 
   private val _sensorLogs = MutableStateFlow<List<String>>(emptyList())
   override val sensorLogs: StateFlow<List<String>> = _sensorLogs.asStateFlow()
+
+  private val _isLoggedIn = MutableStateFlow(sharedPrefs.getBoolean("is_logged_in", false))
+  override val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+
+  private val _userName = MutableStateFlow(sharedPrefs.getString("user_name", "") ?: "")
+  override val userName: StateFlow<String> = _userName.asStateFlow()
+
+  private val _userEmail = MutableStateFlow(sharedPrefs.getString("user_email", "") ?: "")
+  override val userEmail: StateFlow<String> = _userEmail.asStateFlow()
 
   init {
     loadSessions()
@@ -104,6 +118,30 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
 
   override fun clearLogs() {
     _sensorLogs.value = emptyList()
+  }
+
+  override fun loginUser(email: String, name: String) {
+    _userName.value = name
+    _userEmail.value = email
+    _isLoggedIn.value = true
+    sharedPrefs.edit()
+      .putBoolean("is_logged_in", true)
+      .putString("user_name", name)
+      .putString("user_email", email)
+      .apply()
+    logEvent("User $name logged in ($email).")
+  }
+
+  override fun logoutUser() {
+    _userName.value = ""
+    _userEmail.value = ""
+    _isLoggedIn.value = false
+    sharedPrefs.edit()
+      .putBoolean("is_logged_in", false)
+      .remove("user_name")
+      .remove("user_email")
+      .apply()
+    logEvent("User logged out.")
   }
 
   private fun loadSessions() {

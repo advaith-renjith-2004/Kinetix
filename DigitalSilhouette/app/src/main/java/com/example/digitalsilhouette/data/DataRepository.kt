@@ -24,8 +24,10 @@ interface DataRepository {
   val supabaseUserId: StateFlow<String>
   val targetWifiNetworks: StateFlow<Set<String>>
   val homeWifiNetworks: StateFlow<Set<String>>
+  val isTourCompleted: StateFlow<Boolean>
 
   fun setServiceRunning(running: Boolean)
+  fun markTourCompleted()
   fun setFocusActive(active: Boolean, startTime: Long?)
   fun addSession(startTime: Long, endTime: Long, durationSeconds: Long)
   fun clearHistory()
@@ -87,13 +89,17 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
   )
   override val homeWifiNetworks: StateFlow<Set<String>> = _homeWifiNetworks.asStateFlow()
 
+  private val _isTourCompleted = MutableStateFlow(true)
+  override val isTourCompleted: StateFlow<Boolean> = _isTourCompleted.asStateFlow()
+
   init {
     loadSessions()
     logEvent("System initialized. Welcome to Kinetix.")
+    val email = sharedPrefs.getString("user_email", "") ?: ""
+    _isTourCompleted.value = if (email.isEmpty()) true else sharedPrefs.getBoolean("has_completed_tour_$email", false)
 
     // Auto-sync profile to Supabase on startup if logged in but not synced yet
     val savedUserId = sharedPrefs.getString("supabase_user_id", null)
-    val email = sharedPrefs.getString("user_email", "") ?: ""
     val name = sharedPrefs.getString("user_name", "") ?: ""
     val password = sharedPrefs.getString("user_password", "") ?: ""
 
@@ -177,6 +183,7 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
     _userName.value = name
     _userEmail.value = email
     _userPassword.value = password
+    _isTourCompleted.value = sharedPrefs.getBoolean("has_completed_tour_$email", false)
     sharedPrefs.edit()
       .putBoolean("is_logged_in", true)
       .putString("user_name", name)
@@ -212,6 +219,7 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
       _userEmail.value = user.email
       _userPassword.value = password
       _supabaseUserId.value = user.id
+      _isTourCompleted.value = sharedPrefs.getBoolean("has_completed_tour_${user.email}", false)
     }
 
     sharedPrefs.edit()
@@ -235,6 +243,7 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
     _userEmail.value = ""
     _userPassword.value = ""
     _supabaseUserId.value = ""
+    _isTourCompleted.value = true
     sharedPrefs.edit()
       .putBoolean("is_logged_in", false)
       .putString("user_name", "")
@@ -245,6 +254,15 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
       .remove("remembered_password")
       .apply()
     logEvent("User logged out and credentials cleared.")
+  }
+
+  override fun markTourCompleted() {
+    val email = _userEmail.value
+    if (email.isNotEmpty()) {
+      sharedPrefs.edit().putBoolean("has_completed_tour_$email", true).apply()
+      _isTourCompleted.value = true
+      logEvent("App tour completed for user $email.")
+    }
   }
 
   override fun addTargetWifiNetwork(ssid: String) {

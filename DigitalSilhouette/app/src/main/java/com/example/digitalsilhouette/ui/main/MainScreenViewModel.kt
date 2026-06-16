@@ -30,6 +30,7 @@ class MainScreenViewModel(
   val userEmail: StateFlow<String> = repository.userEmail
   val userPassword: StateFlow<String> = repository.userPassword
   val supabaseUserId: StateFlow<String> = repository.supabaseUserId
+  val isTourCompleted: StateFlow<Boolean> = repository.isTourCompleted
 
   private val _hasNotificationPermission = MutableStateFlow(true)
   val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission.asStateFlow()
@@ -49,7 +50,8 @@ class MainScreenViewModel(
     userName,
     userEmail,
     userPassword,
-    supabaseUserId
+    supabaseUserId,
+    isTourCompleted
   ) { array ->
     val serviceRunning = array[0] as Boolean
     val focusActive = array[1] as Boolean
@@ -65,6 +67,7 @@ class MainScreenViewModel(
     val email = array[9] as String
     val password = array[10] as String
     val userId = array[11] as String
+    val tourCompleted = array[12] as Boolean
     MainScreenUiState.Success(
       isServiceRunning = serviceRunning,
       isFocusActive = focusActive,
@@ -77,7 +80,8 @@ class MainScreenViewModel(
       userName = name,
       userEmail = email,
       userPassword = password,
-      supabaseUserId = userId
+      supabaseUserId = userId,
+      isTourCompleted = tourCompleted
     )
   }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainScreenUiState.Loading)
 
@@ -233,6 +237,10 @@ class MainScreenViewModel(
   fun logoutUser() {
     repository.logoutUser()
   }
+
+  fun markTourCompleted() {
+    repository.markTourCompleted()
+  }
 }
 
 sealed interface MainScreenUiState {
@@ -250,7 +258,8 @@ sealed interface MainScreenUiState {
     val userName: String,
     val userEmail: String,
     val userPassword: String,
-    val supabaseUserId: String
+    val supabaseUserId: String,
+    val isTourCompleted: Boolean
   ) : MainScreenUiState
 
   data class Error(val throwable: Throwable) : MainScreenUiState

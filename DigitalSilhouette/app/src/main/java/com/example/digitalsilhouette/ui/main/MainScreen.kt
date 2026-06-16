@@ -342,6 +342,130 @@ internal fun MainScreenContent(
     )
   }
 
+  // Onboarding On-First-Login Tour Tutorial
+  if (!successState.isTourCompleted) {
+    val tourSteps = remember(successState.userName) {
+      listOf(
+        TourStep(
+          title = "Welcome to Kinetix! 🎯",
+          description = "Welcome, ${successState.userName}! Kinetix is a smart, sensor-based focus tracking app designed to silence distractions when you are working and physical stillness is detected.",
+          buttonText = "Next Step"
+        ),
+        TourStep(
+          title = "Begin Focus Mode ⏱️",
+          description = "Tap the central shield button on the dashboard to start tracking. Kinetix monitors your physical stillness using your phone's activity recognition. If you remain still (working), focus mode activates automatically and mutes your phone's ringer.",
+          buttonText = "Next Step"
+        ),
+        TourStep(
+          title = "Multi-Tab Navigation 🧭",
+          description = "Use the thumb-friendly bottom navigation bar to switch screens:\n\n• Focus: Your central dashboard\n• History: View completed sessions and focus time statistics\n• Logs: Live feed of sensor events and system logs",
+          buttonText = "Next Step"
+        ),
+        TourStep(
+          title = "Choose Your Theme Preset 🎨",
+          description = "Tap the handshake (🤝) icon at the top right of the dashboard to open your profile. Here you can pick from premium presets like Cyberpunk, Forest Oasis, Obsidian, or Snow Drift to match your style!",
+          buttonText = "Next Step"
+        ),
+        TourStep(
+          title = "Smart Wi-Fi Detection 📶",
+          description = "When you join a Wi-Fi network (like at your office), Kinetix prompts you to label it. If labeled as an Office network, focus mode will start automatically next time you connect!",
+          buttonText = "Finish Tour"
+        )
+      )
+    }
+
+    var currentStep by remember { mutableStateOf(0) }
+    val stepData = tourSteps[currentStep]
+
+    AlertDialog(
+      onDismissRequest = {
+        // Enforce completing or skipping tour
+      },
+      title = {
+        Column {
+          Text(
+            text = stepData.title,
+            fontFamily = Domine,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            color = theme.accent
+          )
+          Spacer(modifier = Modifier.height(4.dp))
+          Text(
+            text = "Step ${currentStep + 1} of ${tourSteps.size}",
+            fontSize = 11.sp,
+            color = theme.textSecondary,
+            fontWeight = FontWeight.SemiBold
+          )
+        }
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text(
+            text = stepData.description,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            color = theme.textPrimary
+          )
+          
+          Spacer(modifier = Modifier.height(8.dp))
+          
+          // Progress Dots
+          Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            tourSteps.forEachIndexed { index, _ ->
+              Box(
+                modifier = Modifier
+                  .size(8.dp)
+                  .clip(CircleShape)
+                  .background(if (index == currentStep) theme.accent else theme.textSecondary.copy(alpha = 0.3f))
+              )
+              if (index < tourSteps.size - 1) {
+                Spacer(modifier = Modifier.width(6.dp))
+              }
+            }
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (currentStep < tourSteps.size - 1) {
+              currentStep++
+            } else {
+              viewModel.markTourCompleted()
+            }
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = theme.accent)
+        ) {
+          Text(
+            text = stepData.buttonText,
+            color = if (theme.name == "Snow Drift") Color.White else Color.Black,
+            fontWeight = FontWeight.Bold
+          )
+        }
+      },
+      dismissButton = {
+        TextButton(
+          onClick = {
+            viewModel.markTourCompleted()
+          }
+        ) {
+          Text(
+            text = "Skip Tour",
+            color = theme.textSecondary
+          )
+        }
+      },
+      containerColor = theme.cardBg.copy(alpha = 1f),
+      titleContentColor = theme.textPrimary,
+      textContentColor = theme.textPrimary
+    )
+  }
+
   // Staggered entrance animation
   var showContent by remember { mutableStateOf(false) }
   LaunchedEffect(Unit) { showContent = true }
@@ -1535,3 +1659,9 @@ fun MainScreenErrorContent(
     }
   }
 }
+
+private data class TourStep(
+  val title: String,
+  val description: String,
+  val buttonText: String
+)

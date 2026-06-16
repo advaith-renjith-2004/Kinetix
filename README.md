@@ -55,6 +55,28 @@ Kinetix is built with several key features to make it a fully integrated cloud-c
 
 ---
 
+## Dynamic User Interface and Motion System
+
+Kinetix features a hardware-accelerated interface designed to behave like real-world physical elements:
+
+- **Interactive Bottom Navigation Bar**
+  Places critical screens (Focus, History, Logs) directly in thumb's reach, standardizing corner radii and layout padding across all views.
+- **Theme-Aware Skeleton Loading Screen**
+  Mimics the dashboard layout using a visual shimmer pattern that pulses in color tones of the active theme color preset during startup.
+- **Dynamic Animated Vector Background**
+  A custom drawn canvas featuring parallel wavy lines, double-shadowed circles, floating square blocks, and dot matrices. The colors dynamically shift and blend transparently to align with whichever color theme is selected.
+- **Physics-Based Spring Transitions**
+  Uses spring curves for horizontal sliding transitions when navigating between tabs and bouncy scale feedback for the central focus controls.
+- **Pressed Depth Shadows**
+  Interactive card containers feature press-reactive elevation shadows that flatten slightly upon click to simulate physical material compression.
+- **Keyframe-Based Input Field Shaking**
+  Text inputs perform a horizontal physics-based shake offset when login validation fails to denote tactile resistance.
+- **Guided Onboarding Stepper**
+  An interactive step-by-step onboarding tutorial dialog popup that guides new users through the app's features upon first login, storing completion preferences in local shared configuration.
+
+---
+
+
 ## For the developers
 
 We poured a lot of love into the technical foundation of Kinetix:

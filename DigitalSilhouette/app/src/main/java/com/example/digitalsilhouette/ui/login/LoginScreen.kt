@@ -102,6 +102,34 @@ fun LoginScreen(
     ),
     label = "glowAlpha"
   )
+  val glowXOffset by infiniteTransition.animateFloat(
+    initialValue = -50f,
+    targetValue = 50f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(4500, easing = EaseInOutSine),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "glowXOffset"
+  )
+
+  // Shake animatables for validation feedback
+  val nameShakeOffset = remember { Animatable(0f) }
+  val emailShakeOffset = remember { Animatable(0f) }
+  val passwordShakeOffset = remember { Animatable(0f) }
+
+  val triggerShake: suspend (Animatable<Float, AnimationVector1D>) -> Unit = { animatable ->
+    animatable.animateTo(
+      targetValue = 0f,
+      animationSpec = keyframes {
+        durationMillis = 300
+        -12f at 50
+        12f at 100
+        -8f at 150
+        8f at 200
+        -4f at 250
+      }
+    )
+  }
 
   Box(
     modifier = Modifier
@@ -129,7 +157,7 @@ fun LoginScreen(
     Box(
       modifier = Modifier
         .size(340.dp)
-        .offset(y = (-60).dp)
+        .offset(x = glowXOffset.dp, y = (-60).dp)
         .clip(RoundedCornerShape(170.dp))
         .background(
           Brush.radialGradient(
@@ -215,7 +243,7 @@ fun LoginScreen(
               animationSpec = tween(400, delayMillis = 150)
             )
           ) {
-            Column {
+            Column(modifier = Modifier.offset(x = nameShakeOffset.value.dp)) {
               OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -258,7 +286,7 @@ fun LoginScreen(
               animationSpec = tween(400, delayMillis = 300)
             )
           ) {
-            Column {
+            Column(modifier = Modifier.offset(x = emailShakeOffset.value.dp)) {
               OutlinedTextField(
                 value = email,
                 onValueChange = {
@@ -302,7 +330,7 @@ fun LoginScreen(
               animationSpec = tween(400, delayMillis = 450)
             )
           ) {
-            Column {
+            Column(modifier = Modifier.offset(x = passwordShakeOffset.value.dp)) {
               OutlinedTextField(
                 value = password,
                 onValueChange = {
@@ -375,14 +403,17 @@ fun LoginScreen(
                   if (name.isBlank()) {
                     nameError = "Oops! We need your name to get started 😊"
                     isValid = false
+                    coroutineScope.launch { triggerShake(nameShakeOffset) }
                   }
                   if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                     emailError = "Hmm, that doesn't look like a valid email"
                     isValid = false
+                    coroutineScope.launch { triggerShake(emailShakeOffset) }
                   }
                   if (password.length < 6) {
                     passwordError = "A bit short — try at least 6 characters"
                     isValid = false
+                    coroutineScope.launch { triggerShake(passwordShakeOffset) }
                   }
 
                   if (isValid) {
@@ -394,10 +425,12 @@ fun LoginScreen(
                   if (email.isBlank() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                     emailError = "Hmm, that doesn't look like a valid email"
                     isValid = false
+                    coroutineScope.launch { triggerShake(emailShakeOffset) }
                   }
                   if (password.length < 6) {
                     passwordError = "A bit short — try at least 6 characters"
                     isValid = false
+                    coroutineScope.launch { triggerShake(passwordShakeOffset) }
                   }
 
                   if (isValid) {
@@ -408,6 +441,8 @@ fun LoginScreen(
                       isLoading = false
                       if (error != null) {
                         loginError = error
+                        triggerShake(emailShakeOffset)
+                        triggerShake(passwordShakeOffset)
                       }
                     }
                   }
@@ -482,13 +517,34 @@ fun ThemeSelectorRow(
   ) {
     items(themes) { (key, label) ->
       val isSelected = selectedTheme == key
+      val borderWidth by animateDpAsState(
+        targetValue = if (isSelected) 1.5.dp else 1.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "borderWidth"
+      )
+      val borderColor by animateColorAsState(
+        targetValue = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.15f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "borderColor"
+      )
+      val backgroundAlpha by animateFloatAsState(
+        targetValue = if (isSelected) 0.12f else 0.5f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "bgAlpha"
+      )
+      val textAlpha by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0.6f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "textAlpha"
+      )
+
       Box(
         modifier = Modifier
           .clip(RoundedCornerShape(12.dp))
-          .background(if (isSelected) theme.accent.copy(alpha = 0.12f) else theme.cardBg.copy(alpha = 0.5f))
+          .background(if (isSelected) theme.accent.copy(alpha = backgroundAlpha) else theme.cardBg.copy(alpha = backgroundAlpha))
           .border(
-            width = if (isSelected) 1.5.dp else 1.dp,
-            color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.15f),
+            width = borderWidth,
+            color = borderColor,
             shape = RoundedCornerShape(12.dp)
           )
           .clickable { onThemeSelected(key) }
@@ -498,7 +554,7 @@ fun ThemeSelectorRow(
           text = label,
           fontSize = 11.sp,
           fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-          color = if (isSelected) theme.accent else theme.textSecondary
+          color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = textAlpha)
         )
       }
     }

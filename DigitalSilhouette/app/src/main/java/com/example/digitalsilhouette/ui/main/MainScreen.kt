@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -81,6 +82,26 @@ fun MainScreen(
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val themeName by viewModel.selectedTheme.collectAsStateWithLifecycle()
 
+  val glowInfiniteTransition = rememberInfiniteTransition(label = "glowPulse")
+  val glowXOffset by glowInfiniteTransition.animateFloat(
+    initialValue = -80f,
+    targetValue = 80f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(5000, easing = EaseInOutSine),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "glowX"
+  )
+  val glowYOffset by glowInfiniteTransition.animateFloat(
+    initialValue = -50f,
+    targetValue = 50f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(4000, easing = EaseInOutSine),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "glowY"
+  )
+
   val currentTheme = when (themeName) {
     "Cyberpunk" -> ThemePresets.Cyberpunk
     "Forest Oasis" -> ThemePresets.ForestOasis
@@ -127,6 +148,19 @@ fun MainScreen(
           modifier = Modifier
             .fillMaxSize()
             .background(currentTheme.background)
+            .drawBehind {
+              val center = Offset(
+                x = size.width / 2f + glowXOffset.dp.toPx(),
+                y = size.height / 3f + glowYOffset.dp.toPx()
+              )
+              drawRect(
+                brush = Brush.radialGradient(
+                  colors = listOf(currentTheme.accent.copy(alpha = 0.06f), Color.Transparent),
+                  center = center,
+                  radius = size.width * 0.8f
+                )
+              )
+            }
         ) {
           MainScreenContent(
             successState = successState,
@@ -275,13 +309,34 @@ internal fun MainScreenContent(
             ) {
               items(themesList) { (key, label) ->
                 val isSelected = successState.selectedTheme == key
+                val borderWidth by animateDpAsState(
+                  targetValue = if (isSelected) 1.5.dp else 1.dp,
+                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                  label = "borderWidth"
+                )
+                val borderColor by animateColorAsState(
+                  targetValue = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.15f),
+                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                  label = "borderColor"
+                )
+                val backgroundAlpha by animateFloatAsState(
+                  targetValue = if (isSelected) 0.12f else 0.5f,
+                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                  label = "bgAlpha"
+                )
+                val textAlpha by animateFloatAsState(
+                  targetValue = if (isSelected) 1f else 0.6f,
+                  animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                  label = "textAlpha"
+                )
+
                 Box(
                   modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) theme.accent.copy(alpha = 0.12f) else theme.cardBg.copy(alpha = 0.5f))
+                    .background(if (isSelected) theme.accent.copy(alpha = backgroundAlpha) else theme.cardBg.copy(alpha = backgroundAlpha))
                     .border(
-                      width = if (isSelected) 1.5.dp else 1.dp,
-                      color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = 0.15f),
+                      width = borderWidth,
+                      color = borderColor,
                       shape = RoundedCornerShape(12.dp)
                     )
                     .clickable { viewModel.changeTheme(key) }
@@ -291,7 +346,7 @@ internal fun MainScreenContent(
                     text = label,
                     fontSize = 11.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) theme.accent else theme.textSecondary
+                    color = if (isSelected) theme.accent else theme.textSecondary.copy(alpha = textAlpha)
                   )
                 }
               }
@@ -424,120 +479,140 @@ internal fun MainScreenContent(
       }
       Spacer(modifier = Modifier.height(16.dp))
 
-      // Content dynamically switching based on tabs
-      when (activeTab) {
-        "dashboard" -> {
-          Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-          ) {
-            // Permission Alerts Block
-            if (!successState.hasNotificationPermission || !successState.hasDndPermission) {
+      // Content dynamically switching based on tabs with spring transitions
+      AnimatedContent(
+        targetState = activeTab,
+        transitionSpec = {
+          val isForward = when (initialState) {
+            "dashboard" -> true
+            "history" -> targetState == "logs"
+            else -> false
+          }
+          if (isForward) {
+            (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { it } + fadeIn(tween(250))) togetherWith
+            (slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it } + fadeOut(tween(250)))
+          } else {
+            (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it } + fadeIn(tween(250))) togetherWith
+            (slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { it } + fadeOut(tween(250)))
+          }
+        },
+        label = "tabTransition",
+        modifier = Modifier.fillMaxWidth().weight(1f)
+      ) { tab ->
+        when (tab) {
+          "dashboard" -> {
+            Column(
+              modifier = Modifier.fillMaxSize(),
+              horizontalAlignment = Alignment.CenterHorizontally,
+              verticalArrangement = Arrangement.Top
+            ) {
+              // Permission Alerts Block
+              if (!successState.hasNotificationPermission || !successState.hasDndPermission) {
+                AnimatedVisibility(
+                  visible = showContent,
+                  enter = fadeIn(tween(400, delayMillis = 100)) + slideInVertically(
+                    initialOffsetY = { it / 4 },
+                    animationSpec = tween(400, delayMillis = 100)
+                  )
+                ) {
+                  PermissionAlertCard(
+                    hasNotification = successState.hasNotificationPermission,
+                    hasDnd = successState.hasDndPermission,
+                    onRequestNotification = {
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                      }
+                    },
+                    onRequestDnd = {
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                        context.startActivity(intent)
+                      }
+                    }
+                  )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+              }
+
+              // Main Silhouette Shield Card with animations
               AnimatedVisibility(
                 visible = showContent,
-                enter = fadeIn(tween(400, delayMillis = 100)) + slideInVertically(
-                  initialOffsetY = { it / 4 },
-                  animationSpec = tween(400, delayMillis = 100)
+                enter = fadeIn(tween(500, delayMillis = 200)) + slideInVertically(
+                  initialOffsetY = { it / 3 },
+                  animationSpec = tween(500, delayMillis = 200, easing = FastOutSlowInEasing)
                 )
               ) {
-                PermissionAlertCard(
-                  hasNotification = successState.hasNotificationPermission,
-                  hasDnd = successState.hasDndPermission,
-                  onRequestNotification = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                      requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                  },
-                  onRequestDnd = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                      val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                      context.startActivity(intent)
-                    }
-                  }
-                )
-              }
-              Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Main Silhouette Shield Card with animations
-            AnimatedVisibility(
-              visible = showContent,
-              enter = fadeIn(tween(500, delayMillis = 200)) + slideInVertically(
-                initialOffsetY = { it / 3 },
-                animationSpec = tween(500, delayMillis = 200, easing = FastOutSlowInEasing)
-              )
-            ) {
-              SilhouetteShield(
-                isServiceRunning = successState.isServiceRunning,
-                isFocusActive = successState.isFocusActive,
-                elapsedSeconds = elapsedSeconds,
-                onToggleService = {
-                  if (!successState.isServiceRunning) {
-                    val permissions = mutableListOf(
-                      android.Manifest.permission.ACCESS_FINE_LOCATION,
-                      android.Manifest.permission.RECORD_AUDIO
-                    )
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                      permissions.add(android.Manifest.permission.ACTIVITY_RECOGNITION)
-                    }
-                    
-                    val missingPermissions = permissions.filter {
-                      androidx.core.content.ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
-                    }
-                    
-                    if (missingPermissions.isNotEmpty()) {
-                      multiplePermissionsLauncher.launch(missingPermissions.toTypedArray())
+                SilhouetteShield(
+                  isServiceRunning = successState.isServiceRunning,
+                  isFocusActive = successState.isFocusActive,
+                  elapsedSeconds = elapsedSeconds,
+                  onToggleService = {
+                    if (!successState.isServiceRunning) {
+                      val permissions = mutableListOf(
+                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                        android.Manifest.permission.RECORD_AUDIO
+                      )
+                      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                        permissions.add(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                      }
+                      
+                      val missingPermissions = permissions.filter {
+                        androidx.core.content.ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                      }
+                      
+                      if (missingPermissions.isNotEmpty()) {
+                        multiplePermissionsLauncher.launch(missingPermissions.toTypedArray())
+                      } else {
+                        viewModel.handleToggleRequest(context)
+                      }
                     } else {
                       viewModel.handleToggleRequest(context)
                     }
-                  } else {
-                    viewModel.handleToggleRequest(context)
-                  }
-                },
-                theme = theme,
-                onLogout = {
-                  if (successState.userEmail.isNotEmpty()) {
-                    viewModel.logoutUser()
-                  } else {
-                    onItemClick(Login)
-                  }
-                },
-                isLoggedIn = successState.userEmail.isNotEmpty()
-              )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+                  },
+                  theme = theme,
+                  onLogout = {
+                    if (successState.userEmail.isNotEmpty()) {
+                      viewModel.logoutUser()
+                    } else {
+                      onItemClick(Login)
+                    }
+                  },
+                  isLoggedIn = successState.userEmail.isNotEmpty()
+                )
+              }
+              Spacer(modifier = Modifier.height(12.dp))
 
-            // Stats Section
-            AnimatedVisibility(
-              visible = showContent,
-              enter = fadeIn(tween(400, delayMillis = 350)) + slideInVertically(
-                initialOffsetY = { it / 3 },
-                animationSpec = tween(400, delayMillis = 350)
-              )
-            ) {
-              StatsRow(sessions = successState.completedSessions, theme = theme)
+              // Stats Section
+              AnimatedVisibility(
+                visible = showContent,
+                enter = fadeIn(tween(400, delayMillis = 350)) + slideInVertically(
+                  initialOffsetY = { it / 3 },
+                  animationSpec = tween(400, delayMillis = 350)
+                )
+              ) {
+                StatsRow(sessions = successState.completedSessions, theme = theme)
+              }
             }
           }
-        }
-        "history" -> {
-          Box(modifier = Modifier.fillMaxSize()) {
-            HistoryList(
-              sessions = successState.completedSessions,
-              onClearHistory = { viewModel.clearHistory() },
-              theme = theme,
-              modifier = Modifier.fillMaxSize()
-            )
+          "history" -> {
+            Box(modifier = Modifier.fillMaxSize()) {
+              HistoryList(
+                sessions = successState.completedSessions,
+                onClearHistory = { viewModel.clearHistory() },
+                theme = theme,
+                modifier = Modifier.fillMaxSize()
+              )
+            }
           }
-        }
-        "logs" -> {
-          Box(modifier = Modifier.fillMaxSize()) {
-            LogTerminal(
-              logs = successState.sensorLogs,
-              onClearLogs = { viewModel.clearLogs() },
-              theme = theme,
-              modifier = Modifier.fillMaxSize()
-            )
+          "logs" -> {
+            Box(modifier = Modifier.fillMaxSize()) {
+              LogTerminal(
+                logs = successState.sensorLogs,
+                onClearLogs = { viewModel.clearLogs() },
+                theme = theme,
+                modifier = Modifier.fillMaxSize()
+              )
+            }
           }
         }
       }
@@ -650,6 +725,17 @@ fun SilhouetteShield(
     label = "rotation"
   )
 
+  val buttonScale by animateFloatAsState(
+    targetValue = if (isServiceRunning) 0.96f else 1.0f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+    label = "buttonScale"
+  )
+  val circleScale by animateFloatAsState(
+    targetValue = if (isFocusActive) 1.05f else 1.0f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessLow),
+    label = "circleScale"
+  )
+
   val cardBackground = if (isFocusActive) {
     Brush.verticalGradient(listOf(theme.accent.copy(alpha = 0.06f), Color.Transparent))
   } else {
@@ -667,7 +753,11 @@ fun SilhouetteShield(
     modifier = Modifier.fillMaxWidth(),
     shape = RoundedCornerShape(20.dp),
     border = BorderStroke(1.dp, theme.border),
-    colors = CardDefaults.cardColors(containerColor = theme.cardBg)
+    colors = CardDefaults.cardColors(containerColor = theme.cardBg),
+    elevation = CardDefaults.cardElevation(
+      defaultElevation = 8.dp,
+      pressedElevation = 4.dp
+    )
   ) {
     Box(
       modifier = Modifier
@@ -744,6 +834,7 @@ fun SilhouetteShield(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
               .size(110.dp)
+              .graphicsLayer(scaleX = circleScale, scaleY = circleScale)
               .clip(CircleShape)
               .background(theme.background)
               .border(BorderStroke(2.dp, theme.accent), CircleShape)
@@ -814,8 +905,9 @@ fun SilhouetteShield(
             containerColor = if (isServiceRunning) Color(0xFFE53935) else theme.accent,
             contentColor = if (isServiceRunning || theme.name == "Snow Drift") Color.White else Color.Black
           ),
-          shape = RoundedCornerShape(14.dp),
-          contentPadding = PaddingValues(horizontal = 28.dp, vertical = 12.dp)
+          shape = RoundedCornerShape(12.dp),
+          contentPadding = PaddingValues(horizontal = 28.dp, vertical = 12.dp),
+          modifier = Modifier.graphicsLayer(scaleX = buttonScale, scaleY = buttonScale)
         ) {
           Text(
             text = if (isServiceRunning) "End Focus" else "Begin Focus",
@@ -990,7 +1082,11 @@ fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
       colors = CardDefaults.cardColors(containerColor = theme.cardBg),
-      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.2f))
+      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.2f)),
+      elevation = CardDefaults.cardElevation(
+        defaultElevation = 4.dp,
+        pressedElevation = 2.dp
+      )
     ) {
       Column(
         modifier = Modifier.padding(14.dp),
@@ -1008,7 +1104,11 @@ fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
       colors = CardDefaults.cardColors(containerColor = theme.cardBg),
-      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.2f))
+      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.2f)),
+      elevation = CardDefaults.cardElevation(
+        defaultElevation = 4.dp,
+        pressedElevation = 2.dp
+      )
     ) {
       Column(
         modifier = Modifier.padding(14.dp),
@@ -1026,7 +1126,11 @@ fun StatsRow(sessions: List<FocusSession>, theme: FocusTheme) {
       modifier = Modifier.weight(1f),
       shape = RoundedCornerShape(16.dp),
       colors = CardDefaults.cardColors(containerColor = theme.cardBg),
-      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.2f))
+      border = BorderStroke(1.dp, theme.border.copy(alpha = 0.2f)),
+      elevation = CardDefaults.cardElevation(
+        defaultElevation = 4.dp,
+        pressedElevation = 2.dp
+      )
     ) {
       Column(
         modifier = Modifier.padding(14.dp),

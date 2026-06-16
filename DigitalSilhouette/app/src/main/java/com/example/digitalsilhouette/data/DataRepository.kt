@@ -20,6 +20,7 @@ interface DataRepository {
   val userName: StateFlow<String>
   val userEmail: StateFlow<String>
   val userPassword: StateFlow<String>
+  val targetWifiNetworks: StateFlow<Set<String>>
 
   fun setServiceRunning(running: Boolean)
   fun setFocusActive(active: Boolean, startTime: Long?)
@@ -30,6 +31,7 @@ interface DataRepository {
   fun clearLogs()
   fun loginUser(email: String, name: String, password: String)
   fun logoutUser()
+  fun addTargetWifiNetwork(ssid: String)
 }
 
 class DefaultDataRepository(private val context: Context) : DataRepository {
@@ -64,6 +66,11 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
 
   private val _userPassword = MutableStateFlow(sharedPrefs.getString("user_password", "") ?: "")
   override val userPassword: StateFlow<String> = _userPassword.asStateFlow()
+
+  private val _targetWifiNetworks = MutableStateFlow(
+    sharedPrefs.getStringSet("target_wifi_networks", setOf("\"AndroidWifi\"")) ?: setOf("\"AndroidWifi\"")
+  )
+  override val targetWifiNetworks: StateFlow<Set<String>> = _targetWifiNetworks.asStateFlow()
 
   init {
     loadSessions()
@@ -140,10 +147,25 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
 
   override fun logoutUser() {
     _isLoggedIn.value = false
+    _userName.value = ""
+    _userEmail.value = ""
+    _userPassword.value = ""
     sharedPrefs.edit()
       .putBoolean("is_logged_in", false)
+      .putString("user_name", "")
+      .putString("user_email", "")
+      .putString("user_password", "")
       .apply()
     logEvent("User logged out.")
+  }
+
+  override fun addTargetWifiNetwork(ssid: String) {
+    val currentSet = _targetWifiNetworks.value.toMutableSet()
+    if (currentSet.add(ssid)) {
+        _targetWifiNetworks.value = currentSet
+        sharedPrefs.edit().putStringSet("target_wifi_networks", currentSet).apply()
+        logEvent("Added '$ssid' to target focus networks.")
+    }
   }
 
   private fun loadSessions() {

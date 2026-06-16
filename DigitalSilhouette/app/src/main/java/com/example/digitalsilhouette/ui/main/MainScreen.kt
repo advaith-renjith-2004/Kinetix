@@ -192,7 +192,7 @@ internal fun MainScreenContent(
   ) { permissions ->
     val allGranted = permissions.entries.all { it.value }
     if (allGranted) {
-      viewModel.toggleService(context)
+      viewModel.handleToggleRequest(context)
     }
   }
 
@@ -207,6 +207,32 @@ internal fun MainScreenContent(
     } else {
       elapsedSeconds = 0L
     }
+  }
+
+  val showWifiPrompt by viewModel.showWifiPrompt.collectAsStateWithLifecycle()
+
+  if (showWifiPrompt) {
+    AlertDialog(
+      onDismissRequest = { viewModel.onWifiPromptResult(context, false) },
+      title = { Text(text = "Focus Network Detected", fontFamily = Domine, fontWeight = FontWeight.Bold) },
+      text = { Text(text = "You are connected to '${viewModel.currentDetectedSsid}'. Is this your Home or Office Wi-Fi? Saving it ensures focus tracking works optimally.") },
+      confirmButton = {
+        Button(
+          onClick = { viewModel.onWifiPromptResult(context, true) },
+          colors = ButtonDefaults.buttonColors(containerColor = theme.accent)
+        ) {
+          Text("Yes, Save it", color = theme.background)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { viewModel.onWifiPromptResult(context, false) }) {
+          Text("No, skip", color = theme.textSecondary)
+        }
+      },
+      containerColor = theme.cardBg,
+      titleContentColor = theme.textPrimary,
+      textContentColor = theme.textPrimary
+    )
   }
 
   // Staggered entrance animation
@@ -336,10 +362,10 @@ internal fun MainScreenContent(
             if (missingPermissions.isNotEmpty()) {
               multiplePermissionsLauncher.launch(missingPermissions.toTypedArray())
             } else {
-              viewModel.toggleService(context)
+              viewModel.handleToggleRequest(context)
             }
           } else {
-            viewModel.toggleService(context)
+            viewModel.handleToggleRequest(context)
           }
         },
         theme = theme

@@ -90,7 +90,48 @@ class MainScreenViewModel(
     }
   }
 
-  fun toggleService(context: Context) {
+  private val _showWifiPrompt = MutableStateFlow(false)
+  val showWifiPrompt: StateFlow<Boolean> = _showWifiPrompt.asStateFlow()
+  var currentDetectedSsid: String = ""
+
+  fun handleToggleRequest(context: Context) {
+    if (isServiceRunning.value) {
+      // If already running, just turn it off
+      toggleService(context)
+      return
+    }
+
+    // Try to detect current SSID
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val network = connectivityManager.activeNetwork
+    if (network != null) {
+      val capabilities = connectivityManager.getNetworkCapabilities(network)
+      if (capabilities != null && capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        val ssid = wifiManager.connectionInfo.ssid
+        
+        // If it's a new, untracked network and not an empty/unknown one
+        if (ssid != "<unknown ssid>" && ssid.isNotBlank() && !repository.targetWifiNetworks.value.contains(ssid)) {
+            currentDetectedSsid = ssid
+            _showWifiPrompt.value = true
+            return
+        }
+      }
+    }
+    
+    // Fallback: just toggle it normally if no wifi or already known
+    toggleService(context)
+  }
+
+  fun onWifiPromptResult(context: Context, saveNetwork: Boolean) {
+    _showWifiPrompt.value = false
+    if (saveNetwork && currentDetectedSsid.isNotBlank()) {
+      repository.addTargetWifiNetwork(currentDetectedSsid)
+    }
+    toggleService(context)
+  }
+
+  private fun toggleService(context: Context) {
     if (isServiceRunning.value) {
       // Stop tracking
       repository.setServiceRunning(false)

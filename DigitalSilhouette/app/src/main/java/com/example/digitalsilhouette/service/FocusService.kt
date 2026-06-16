@@ -33,9 +33,6 @@ class FocusService : Service() {
     companion object {
         const val ACTION_CHECK_ENVIRONMENT = "com.example.digitalsilhouette.ACTION_CHECK_ENVIRONMENT"
         private const val CHANNEL_ID = "digital_silhouette_channel"
-        
-        // Mock target networks for demonstration
-        val TARGET_NETWORKS = listOf("\"HomeNetwork\"", "\"Office_WiFi\"", "\"AndroidWifi\"")
     }
 
     override fun onCreate() {
@@ -115,7 +112,7 @@ class FocusService : Service() {
                 return true
             }
             
-            return TARGET_NETWORKS.contains(ssid)
+            return repository.targetWifiNetworks.value.contains(ssid)
         }
         return false
     }

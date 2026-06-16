@@ -217,7 +217,7 @@ internal fun MainScreenContent(
           Text("Ignore", color = theme.textSecondary)
         }
       },
-      containerColor = theme.cardBg,
+      containerColor = theme.cardBg.copy(alpha = 1f),
       titleContentColor = theme.textPrimary,
       textContentColor = theme.textPrimary
     )
@@ -336,7 +336,7 @@ internal fun MainScreenContent(
           Text("Log Out", color = Color(0xFFEF5350))
         }
       },
-      containerColor = theme.cardBg,
+      containerColor = theme.cardBg.copy(alpha = 1f),
       titleContentColor = theme.textPrimary,
       textContentColor = theme.textPrimary
     )
